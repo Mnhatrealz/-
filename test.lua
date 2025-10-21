@@ -1653,77 +1653,78 @@ FarmLevel:OnChanged(function(Value)
   _G.Level = Value
 end)
 spawn(function()
-	while task.wait(Sec or 0.2) do
-		if _G.Level then
-			pcall(function()
-				local questGui = plr.PlayerGui.Main.Quest
-				local questTitle = questGui.Container.QuestTitle.Title.Text
-				local q = QuestNeta()
-				local questMobName, questID, questIndex, questDisplay, mobPos, questPos =
-					q[1], q[2], q[3], q[5], q[4], q[6]
+    local replicated = game:GetService("ReplicatedStorage")
+    local ws = game:GetService("Workspace")
+    local Root = plr.Character:WaitForChild("HumanoidRootPart")
 
-				-- ❌ Hủy quest sai
-				if not string.find(questTitle, questDisplay) then
-					replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
-					task.wait(0.25)
-				end
+    while task.wait(Sec or 0.2) do
+        if _G.Level then
+            pcall(function()
+                local questGui = plr.PlayerGui.Main.Quest
+                local q = QuestNeta()
+                if not q or not q[1] then return end
 
-				-- 📜 Nếu chưa có quest → đi nhận
-				if not questGui.Visible then
-					_tp(questPos)
-					if (Root.Position - questPos.Position).Magnitude <= 6 then
-						replicated.Remotes.CommF_:InvokeServer("StartQuest", questIndex, questID)
-					end
-					return
-				end
+                local questMobName, questID, questIndex, mobPos, questDisplay, questPos =
+                    q[1], q[2], q[3], q[4], q[5], q[6]
 
-				-- ⚔️ Nếu đã có quest → bắt đầu farm
-				if questGui.Visible then
-					local foundMob = false
-					for _, mob in pairs(workspace.Enemies:GetChildren()) do
-						if mob.Name == questMobName and Attack.Alive(mob) then
-							foundMob = true
-							if string.find(questTitle, questDisplay) then
-								repeat
-									task.wait()
-									if not _G.Level then break end
-									local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-									if mobRoot then
-										local dist = (Root.Position - mobRoot.Position).Magnitude
+                -- Lấy tên quest hiện tại
+                local questTitle = ""
+                if questGui:FindFirstChild("Container") and questGui.Container:FindFirstChild("QuestTitle") then
+                    questTitle = questGui.Container.QuestTitle.Title.Text
+                end
 
-										-- 🌀 Di chuyển mượt (Bypass TP)
-										if dist > 250 then
-											_tp(mobRoot.CFrame * CFrame.new(0, 40, 0))
-										elseif dist > 30 then
-											Root.CFrame = Root.CFrame:Lerp(
-												mobRoot.CFrame * CFrame.new(0, 20, 0),
-												0.25
-											)
-										end
-									end
+                -- Nếu chưa có hoặc sai quest → Nhận lại
+                if not questGui.Visible or not string.find(questTitle, questDisplay or "") then
+                    replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
+                    task.wait(0.25)
+                    _tp(questPos)
+                    repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 10
+                    replicated.Remotes.CommF_:InvokeServer("StartQuest", questID, questIndex)
+                    task.wait(0.3)
+                    return
+                end
 
-									-- 🗡️ Tấn công mob
-									Attack.Kill(mob, _G.Level)
-								until not _G.Level or mob.Humanoid.Health <= 0 or not mob.Parent or not questGui.Visible
-							else
-								replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
-							end
-						end
-					end
+                -- Tìm mob
+                local targetMob = nil
+                for _, mob in pairs(ws.Enemies:GetChildren()) do
+                    if mob.Name == questMobName and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                        if mob.Humanoid.Health > 0 then
+                            targetMob = mob
+                            break
+                        end
+                    end
+                end
 
-					-- 📍 Nếu không có mob trong map → teleport đến vùng spawn
-					if not foundMob then
-						_tp(mobPos)
-						local spawnMob = workspace.Enemies:FindFirstChild(questMobName)
-						if spawnMob and spawnMob:FindFirstChild("HumanoidRootPart") then
-							_tp(spawnMob.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
-						end
-					end
-				end
-			end)
-		end
-	end
+                if targetMob then
+                    -- Gom mob cùng loại
+                    BringMob(true)
+
+                    local mobRoot = targetMob:WaitForChild("HumanoidRootPart")
+                    local mobHum = targetMob:WaitForChild("Humanoid")
+
+                    repeat
+                        task.wait()
+                        if not _G.Level or mobHum.Health <= 0 or not targetMob.Parent then break end
+
+                        local dist = (Root.Position - mobRoot.Position).Magnitude
+                        if dist > 250 then
+                            _tp(mobRoot.CFrame * CFrame.new(0, 40, 0))
+                        elseif dist > 30 then
+                            Root.CFrame = Root.CFrame:Lerp(mobRoot.CFrame * CFrame.new(0, 20, 0), 0.25)
+                        end
+
+                        Attack.Kill(targetMob, _G.Level)
+                    until mobHum.Health <= 0 or not targetMob.Parent
+                else
+                    -- Không thấy quái → về chỗ spawn
+                    _tp(mobPos)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end
 end)
+
 local TravelDress = Tabs.Main:AddToggle("TravelDress", {Title = "Auto Travel Dressrosa", Description = "", Default = false})
 TravelDress:OnChanged(function(Value)
   _G.TravelDres = Value
