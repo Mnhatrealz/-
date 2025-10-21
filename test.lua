@@ -1654,6 +1654,8 @@ FarmLevel:OnChanged(function(Value)
 end)
 local plr = game.Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
+
+-- Tween di chuyển mượt
 local function TweenObject(Object, Pos, Speed)
     Speed = Speed or 350
     if not Object or not Pos then return end
@@ -1662,6 +1664,8 @@ local function TweenObject(Object, Pos, Speed)
     local tween = TweenService:Create(Object, info, {CFrame = Pos})
     tween:Play()
 end
+
+-- Tính vị trí trung bình của từng loại mob
 local function GetMobPosition(EnemiesName)
     local pos = Vector3.zero
     local count = 0
@@ -1671,25 +1675,24 @@ local function GetMobPosition(EnemiesName)
             count += 1
         end
     end
-    if count == 0 then
-        return nil
-    end
+    if count == 0 then return nil end
     return pos / count
 end
--- Gom mob lại gần nhau
+
+-- Gom mob cùng loại lại gần nhau
 local function BringMob(enable)
     if not enable then return end
     local enemies = workspace.Enemies:GetChildren()
     if #enemies == 0 then return end
+
     local totalpos = {}
-    -- Lấy vị trí trung bình từng loại mob
     for _, v in pairs(enemies) do
         if not totalpos[v.Name] then
             totalpos[v.Name] = GetMobPosition(v.Name)
         end
     end
-    -- Gom mob lại
-    for _, v in pairs(workspace.Enemies:GetChildren()) do
+
+    for _, v in pairs(enemies) do
         if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
             local hrp = v.HumanoidRootPart
             local humanoid = v.Humanoid
@@ -1701,6 +1704,8 @@ local function BringMob(enable)
                     if Distance > 3 and Distance <= 280 then
                         TweenObject(hrp, TargetCFrame, 300)
                         hrp.CanCollide = false
+                        humanoid.WalkSpeed = 0
+                        humanoid.JumpPower = 0
                         if humanoid:FindFirstChild("Animator") then
                             humanoid.Animator:Destroy()
                         end
@@ -1714,7 +1719,7 @@ local function BringMob(enable)
     end
 end
 
--- Farm level
+-- Auto Farm Level
 spawn(function()
     local replicated = game:GetService("ReplicatedStorage")
     local ws = game:GetService("Workspace")
@@ -1735,17 +1740,16 @@ spawn(function()
                     questTitle = questGui.Container.QuestTitle.Title.Text
                 end
 
-                -- Nếu chưa có quest hoặc quest sai, bỏ và nhận lại
+                -- Nếu chưa có hoặc sai quest
                 if not questGui.Visible or not string.find(questTitle, questDisplay or "") then
                     replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
                     task.wait(0.25)
                     _tp(questPos)
                     repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 6
-                    replicated.Remotes.CommF_:InvokeServer("StartQuest", questIndex, questID)
+                    replicated.Remotes.CommF_:InvokeServer("StartQuest", questID, questIndex)
                     return
                 end
 
-                -- Khi đang có quest
                 local foundMob = false
                 for _, mob in pairs(ws.Enemies:GetChildren()) do
                     if mob.Name == questMobName and Attack.Alive(mob) then
@@ -1753,11 +1757,8 @@ spawn(function()
                         local mobRoot = mob:FindFirstChild("HumanoidRootPart")
                         if not mobRoot then continue end
 
-                        -- Gán PosMon = vị trí mob đầu tiên (cho BringEnemy)
-                        PosMon = mobRoot.Position
-
-                        -- Gom mob xung quanh trước khi đánh
-                        BringEnemy(true)
+                        -- Gom mob cùng loại lại trước khi đánh
+                        BringMob(true)
 
                         repeat
                             task.wait()
@@ -1769,13 +1770,14 @@ spawn(function()
                             elseif dist > 30 then
                                 Root.CFrame = Root.CFrame:Lerp(mobRoot.CFrame * CFrame.new(0, 20, 0), 0.25)
                             end
+
                             Attack.Kill(mob, _G.Level)
                         until mob.Humanoid.Health <= 0 or not mob.Parent
                         break
                     end
                 end
 
-                -- Nếu không thấy quái thì di chuyển về vị trí spawn
+                -- Nếu không thấy mob thì về chỗ spawn
                 if not foundMob then
                     _tp(mobPos)
                     task.wait(0.5)
@@ -1788,6 +1790,7 @@ spawn(function()
         end
     end
 end)
+
 local TravelDress = Tabs.Main:AddToggle("TravelDress", {Title = "Auto Travel Dressrosa", Description = "", Default = false})
 TravelDress:OnChanged(function(Value)
   _G.TravelDres = Value
