@@ -1654,23 +1654,26 @@ FarmLevel:OnChanged(function(Value)
 end)
 local plr = game.Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
+local replicated = game:GetService("ReplicatedStorage")
+local ws = game:GetService("Workspace")
 
 -- Tween di chuyển mượt
 local function TweenObject(Object, Pos, Speed)
     Speed = Speed or 350
     if not Object or not Pos then return end
     local Distance = (Pos.Position - Object.Position).Magnitude
+    if Distance < 3 then return end
     local info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(Object, info, {CFrame = Pos})
     tween:Play()
 end
 
 -- Tính vị trí trung bình của từng loại mob
-local function GetMobPosition(EnemiesName)
+local function GetMobPosition(name)
     local pos = Vector3.zero
     local count = 0
-    for _, v in pairs(workspace.Enemies:GetChildren()) do
-        if v.Name == EnemiesName and v:FindFirstChild("HumanoidRootPart") then
+    for _, v in pairs(ws.Enemies:GetChildren()) do
+        if v.Name == name and v:FindFirstChild("HumanoidRootPart") then
             pos += v.HumanoidRootPart.Position
             count += 1
         end
@@ -1682,7 +1685,7 @@ end
 -- Gom mob cùng loại lại gần nhau
 local function BringMob(enable)
     if not enable then return end
-    local enemies = workspace.Enemies:GetChildren()
+    local enemies = ws.Enemies:GetChildren()
     if #enemies == 0 then return end
 
     local totalpos = {}
@@ -1693,15 +1696,15 @@ local function BringMob(enable)
     end
 
     for _, v in pairs(enemies) do
-        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-            local hrp = v.HumanoidRootPart
-            local humanoid = v.Humanoid
-            if humanoid.Health > 0 and (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 350 then
-                local mobPos = totalpos[v.Name]
-                if mobPos then
-                    local TargetCFrame = CFrame.new(mobPos.X, mobPos.Y, mobPos.Z)
-                    local Distance = (hrp.Position - TargetCFrame.Position).Magnitude
-                    if Distance > 3 and Distance <= 280 then
+        local hrp = v:FindFirstChild("HumanoidRootPart")
+        local humanoid = v:FindFirstChild("Humanoid")
+        if hrp and humanoid and humanoid.Health > 0 then
+            local mobPos = totalpos[v.Name]
+            if mobPos then
+                local dist = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+                if dist <= 350 then
+                    local TargetCFrame = CFrame.new(mobPos)
+                    if (hrp.Position - TargetCFrame.Position).Magnitude > 5 then
                         TweenObject(hrp, TargetCFrame, 300)
                         hrp.CanCollide = false
                         humanoid.WalkSpeed = 0
@@ -1721,14 +1724,14 @@ end
 
 -- Auto Farm Level
 spawn(function()
-    local replicated = game:GetService("ReplicatedStorage")
-    local ws = game:GetService("Workspace")
     local Root = plr.Character:WaitForChild("HumanoidRootPart")
+    local Sec = 0.3
 
-    while task.wait(Sec or 0.2) do
+    while task.wait(Sec) do
         if _G.Level then
             pcall(function()
-                local questGui = plr:WaitForChild("PlayerGui"):WaitForChild("Main"):WaitForChild("Quest")
+                if not QuestNeta or not _tp or not Attack then return end
+                local questGui = plr.PlayerGui.Main.Quest
                 local q = QuestNeta()
                 if not q or not q[1] then return end
 
@@ -1740,13 +1743,15 @@ spawn(function()
                     questTitle = questGui.Container.QuestTitle.Title.Text
                 end
 
-                -- Nếu chưa có hoặc sai quest
+                -- Nếu chưa nhận hoặc sai quest
                 if not questGui.Visible or not string.find(questTitle, questDisplay or "") then
                     replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
                     task.wait(0.25)
-                    _tp(questPos)
-                    repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 6
-                    replicated.Remotes.CommF_:InvokeServer("StartQuest", questID, questIndex)
+                    if questPos then
+                        _tp(questPos)
+                        repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 6
+                        replicated.Remotes.CommF_:InvokeServer("StartQuest", questID, questIndex)
+                    end
                     return
                 end
 
@@ -1757,20 +1762,17 @@ spawn(function()
                         local mobRoot = mob:FindFirstChild("HumanoidRootPart")
                         if not mobRoot then continue end
 
-                        -- Gom mob cùng loại lại trước khi đánh
                         BringMob(true)
 
                         repeat
                             task.wait()
                             if not _G.Level or not mob.Parent or mob.Humanoid.Health <= 0 then break end
-
                             local dist = (Root.Position - mobRoot.Position).Magnitude
                             if dist > 250 then
                                 _tp(mobRoot.CFrame * CFrame.new(0, 40, 0))
                             elseif dist > 30 then
                                 Root.CFrame = Root.CFrame:Lerp(mobRoot.CFrame * CFrame.new(0, 20, 0), 0.25)
                             end
-
                             Attack.Kill(mob, _G.Level)
                         until mob.Humanoid.Health <= 0 or not mob.Parent
                         break
@@ -1778,7 +1780,7 @@ spawn(function()
                 end
 
                 -- Nếu không thấy mob thì về chỗ spawn
-                if not foundMob then
+                if not foundMob and mobPos then
                     _tp(mobPos)
                     task.wait(0.5)
                     local spawnMob = ws.Enemies:FindFirstChild(questMobName)
