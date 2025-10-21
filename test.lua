@@ -1652,11 +1652,8 @@ local FarmLevel = Tabs.Main:AddToggle("FarmLevel", {Title = "Auto Farm Level", D
 FarmLevel:OnChanged(function(Value)
   _G.Level = Value
 end)
--- BringEnemy gom mob
 local plr = game.Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
-
--- Tween mượt đối tượng tới vị trí CFrame mong muốn
 local function TweenObject(Object, Pos, Speed)
     Speed = Speed or 350
     if not Object or not Pos then return end
@@ -1665,42 +1662,55 @@ local function TweenObject(Object, Pos, Speed)
     local tween = TweenService:Create(Object, info, {CFrame = Pos})
     tween:Play()
 end
-
--- Hàm BringEnemy gom mob về PosMon
-BringEnemy = function(enable)
-    if not enable or not PosMon then return end
-    local enemies = workspace:WaitForChild("Enemies"):GetChildren()
+local function GetMobPosition(EnemiesName)
+    local pos = Vector3.zero
+    local count = 0
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v.Name == EnemiesName and v:FindFirstChild("HumanoidRootPart") then
+            pos += v.HumanoidRootPart.Position
+            count += 1
+        end
+    end
+    if count == 0 then
+        return nil
+    end
+    return pos / count
+end
+-- Gom mob lại gần nhau
+local function BringMob(enable)
+    if not enable then return end
+    local enemies = workspace.Enemies:GetChildren()
     if #enemies == 0 then return end
-
+    local totalpos = {}
+    -- Lấy vị trí trung bình từng loại mob
     for _, v in pairs(enemies) do
-        pcall(function()
-            local hum = v:FindFirstChild("Humanoid")
-            local hrp = v:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and hum.Health > 0 then
-                local distance = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                if distance <= 350 then
-                    local TargetCFrame = CFrame.new(PosMon.X, PosMon.Y, PosMon.Z)
-                    local diff = (hrp.Position - TargetCFrame.Position).Magnitude
-                    if diff > 3 and diff <= 300 then
+        if not totalpos[v.Name] then
+            totalpos[v.Name] = GetMobPosition(v.Name)
+        end
+    end
+    -- Gom mob lại
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.HumanoidRootPart
+            local humanoid = v.Humanoid
+            if humanoid.Health > 0 and (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 350 then
+                local mobPos = totalpos[v.Name]
+                if mobPos then
+                    local TargetCFrame = CFrame.new(mobPos.X, mobPos.Y, mobPos.Z)
+                    local Distance = (hrp.Position - TargetCFrame.Position).Magnitude
+                    if Distance > 3 and Distance <= 280 then
                         TweenObject(hrp, TargetCFrame, 300)
                         hrp.CanCollide = false
-                        hum.WalkSpeed = 0
-                        hum.JumpPower = 0
-                        if hum:FindFirstChild("Animator") then
-                            hum.Animator:Destroy()
+                        if humanoid:FindFirstChild("Animator") then
+                            humanoid.Animator:Destroy()
                         end
                         pcall(function()
-                            if sethiddenproperty then
-                                sethiddenproperty(plr, "SimulationRadius", math.huge)
-                            else
-                                plr.SimulationRadius = math.huge
-                            end
+                            sethiddenproperty(plr, "SimulationRadius", math.huge)
                         end)
                     end
                 end
             end
-        end)
-        task.wait(0.03)
+        end
     end
 end
 
