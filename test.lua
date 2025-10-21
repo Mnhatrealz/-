@@ -191,22 +191,8 @@ statsSetings = function(Num, value)
     end
   end
 end
-BringEnemy = function()
-  for _,v in pairs(workspace.Enemies:GetChildren()) do
-    if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
-      if PosMon and (v.PrimaryPart.Position - PosMon).Magnitude <= 300 then 
-        v.PrimaryPart.CFrame = CFrame.new(PosMon)
-        v.PrimaryPart.CanCollide = false
-        v.Humanoid.WalkSpeed = 0
-        v.Humanoid.JumpPower = 0
-        if v.Humanoid:FindFirstChild("Animator") then
-          v.Humanoid.Animator:Destroy()
-        end
-        plr.SimulationRadius = math.huge
-      end
-    end
-  end
-end
+
+
 Useskills = function(weapon, skill)
   if weapon == "Melee" then
     weaponSc("Melee")
@@ -2687,9 +2673,9 @@ spawn(function()
   while task.wait() do
     if _G.Auto_Cake_Prince then
       pcall(function()
-        local player = game.Players.LocalPlayer
-        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        local questUI = player.PlayerGui.Main.Quest
+        local plr = game.Players.LocalPlayer
+        local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        local questUI = plr.PlayerGui.Main.Quest
         local enemies = workspace.Enemies
         local cakeIslandPos = CFrame.new(-2077, 252, -12373)
         if not root then return end
@@ -2706,10 +2692,30 @@ spawn(function()
           transparency = bigMirror.Other.Transparency
         end
 
+        -- Bring all enemies near PosMon
+        BringEnemy = function()
+          for _,v in pairs(workspace.Enemies:GetChildren()) do
+            if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+              if PosMon and (v.PrimaryPart.Position - PosMon).Magnitude <= 300 then 
+                v.PrimaryPart.CFrame = CFrame.new(PosMon)
+                v.PrimaryPart.CanCollide = false
+                v.Humanoid.WalkSpeed = 0
+                v.Humanoid.JumpPower = 0
+                if v.Humanoid:FindFirstChild("Animator") then
+                  v.Humanoid.Animator:Destroy()
+                end
+                plr.SimulationRadius = math.huge
+              end
+            end
+          end
+        end
+
         if transparency == 0 or enemies:FindFirstChild("Cake Prince") then
           local v = GetConnectionEnemies("Cake Prince")
           if v then
+            PosMon = v.HumanoidRootPart.Position
             repeat task.wait()
+              BringEnemy()
               Attack.Kill2(v, _G.Auto_Cake_Prince)
             until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0
           else
@@ -2737,16 +2743,17 @@ spawn(function()
               }
               local randomQuest = questData[math.random(1, #questData)]
 
-              local success = false
               repeat
-                success = pcall(function()
-                  return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(randomQuest))
+                pcall(function()
+                  game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(randomQuest))
                 end)
                 task.wait(0.5)
               until not _G.Auto_Cake_Prince or questUI.Visible
             end
 
+            PosMon = v.HumanoidRootPart.Position
             repeat task.wait()
+              BringEnemy()
               Attack.Kill(v, _G.Auto_Cake_Prince)
             until not _G.Auto_Cake_Prince or v.Humanoid.Health <= 0 or transparency == 0
           else
@@ -2757,7 +2764,7 @@ spawn(function()
     end
   end
 end)
-local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Bones", Description = "", Default = false})
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Farm Bones", Description = "", Default = false})
 Q:OnChanged(function(Value)
   _G.AutoFarm_Bone = Value
 end)
@@ -2765,24 +2772,45 @@ spawn(function()
 	while task.wait(0.15) do
 		if _G.AutoFarm_Bone then
 			pcall(function()
-				local player = game.Players.LocalPlayer
-				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-				local questUI = player.PlayerGui.Main.Quest
+				local plr = game.Players.LocalPlayer
+				local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+				local questUI = plr.PlayerGui.Main.Quest
 				if not root then return end
 
 				local BonesTable = {
 					{mob = "Reborn Skeleton", quest = {"StartQuest", "HauntedQuest1", 1}},
-          {mob = "Demonic Soul", quest = {"StartQuest", "HauntedQuest2", 1}},
-          {mob = "Posessed Mummy", quest = {"StartQuest", "HauntedQuest2", 2}},
+					{mob = "Demonic Soul", quest = {"StartQuest", "HauntedQuest2", 1}},
+					{mob = "Posessed Mummy", quest = {"StartQuest", "HauntedQuest2", 2}},
 					{mob = "Living Zombie", quest = {"StartQuest", "HauntedQuest1", 2}},
 				}
 				local QuestPos = CFrame.new(-9516.99316, 172.017181, 6078.46533)
 
-				for i, mobData in ipairs(BonesTable) do
+				-- BringEnemy Function
+				local function BringEnemy(PosMon)
+					for _, v in pairs(workspace.Enemies:GetChildren()) do
+						if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+							if PosMon and (v.PrimaryPart.Position - PosMon).Magnitude <= 300 then
+								v.PrimaryPart.CFrame = CFrame.new(PosMon)
+								v.PrimaryPart.CanCollide = false
+								v.Humanoid.WalkSpeed = 0
+								v.Humanoid.JumpPower = 0
+								if v.Humanoid:FindFirstChild("Animator") then
+									v.Humanoid.Animator:Destroy()
+								end
+								plr.SimulationRadius = math.huge
+							end
+						end
+					end
+				end
+
+				for _, mobData in ipairs(BonesTable) do
 					if not _G.AutoFarm_Bone then break end
 
 					local bone = GetConnectionEnemies({mobData.mob})
 					if bone then
+						local PosMon = bone.HumanoidRootPart.Position
+
+						-- Nhận quest nếu cần
 						if _G.AcceptQuestC and not questUI.Visible then
 							_tp(QuestPos)
 							repeat task.wait(0.2) until (QuestPos.Position - root.Position).Magnitude <= 50
@@ -2793,8 +2821,11 @@ spawn(function()
 						if questUI.Visible == false then
 							game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
 						end
+
+						-- Bring và kill
 						repeat
 							task.wait()
+							BringEnemy(PosMon)
 							Attack.Kill(bone, _G.AutoFarm_Bone)
 						until not _G.AutoFarm_Bone or not bone.Parent or bone.Humanoid.Health <= 0 or (_G.AcceptQuestC and not questUI.Visible)
 					else
