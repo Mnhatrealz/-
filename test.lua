@@ -1652,15 +1652,83 @@ local FarmLevel = Tabs.Main:AddToggle("FarmLevel", {Title = "Auto Farm Level", D
 FarmLevel:OnChanged(function(Value)
   _G.Level = Value
 end)
-spawn(function()
-    local Root = plr.Character:WaitForChild("HumanoidRootPart")
-    local Sec = 0.3
+local plr = game.Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
 
-    while task.wait(Sec) do
+-- Tween đối tượng di chuyển mượt
+local function TweenObject(Object, Pos, Speed)
+    Speed = Speed or 350
+    if not Object or not Pos then return end
+    local Distance = (Pos.Position - Object.Position).Magnitude
+    local info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(Object, info, {CFrame = Pos})
+    tween:Play()
+end
+
+-- Tính vị trí trung bình của từng loại mob
+local function GetMobPosition(EnemiesName)
+    local pos = Vector3.zero
+    local count = 0
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v.Name == EnemiesName and v:FindFirstChild("HumanoidRootPart") then
+            pos += v.HumanoidRootPart.Position
+            count += 1
+        end
+    end
+    if count == 0 then return nil end
+    return pos / count
+end
+
+-- Gom mob lại gần nhau
+local function BringMob(enable)
+    if not enable then return end
+    local enemies = workspace.Enemies:GetChildren()
+    if #enemies == 0 then return end
+
+    local totalpos = {}
+    for _, v in pairs(enemies) do
+        if not totalpos[v.Name] then
+            totalpos[v.Name] = GetMobPosition(v.Name)
+        end
+    end
+
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.HumanoidRootPart
+            local humanoid = v.Humanoid
+            if humanoid.Health > 0 and (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 350 then
+                local mobPos = totalpos[v.Name]
+                if mobPos then
+                    local TargetCFrame = CFrame.new(mobPos.X, mobPos.Y, mobPos.Z)
+                    local Distance = (hrp.Position - TargetCFrame.Position).Magnitude
+                    if Distance > 3 and Distance <= 280 then
+                        TweenObject(hrp, TargetCFrame, 300)
+                        hrp.CanCollide = false
+                        humanoid.WalkSpeed = 0
+                        humanoid.JumpPower = 0
+                        if humanoid:FindFirstChild("Animator") then
+                            humanoid.Animator:Destroy()
+                        end
+                        pcall(function()
+                            sethiddenproperty(plr, "SimulationRadius", math.huge)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Auto Farm Level
+spawn(function()
+    local replicated = game:GetService("ReplicatedStorage")
+    local ws = game:GetService("Workspace")
+    local Root = plr.Character:WaitForChild("HumanoidRootPart")
+
+    while task.wait(Sec or 0.2) do
         if _G.Level then
             pcall(function()
-                if not QuestNeta or not _tp or not Attack then return end
-                local questGui = plr.PlayerGui.Main.Quest
+                local questGui = plr:WaitForChild("PlayerGui"):WaitForChild("Main"):WaitForChild("Quest")
                 local q = QuestNeta()
                 if not q or not q[1] then return end
 
@@ -1672,15 +1740,13 @@ spawn(function()
                     questTitle = questGui.Container.QuestTitle.Title.Text
                 end
 
-                -- Nếu chưa nhận hoặc sai quest
+                -- Nếu chưa có hoặc sai quest
                 if not questGui.Visible or not string.find(questTitle, questDisplay or "") then
                     replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
                     task.wait(0.25)
-                    if questPos then
-                        _tp(questPos)
-                        repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 6
-                        replicated.Remotes.CommF_:InvokeServer("StartQuest", questID, questIndex)
-                    end
+                    _tp(questPos)
+                    repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 6
+                    replicated.Remotes.CommF_:InvokeServer("StartQuest", questID, questIndex)
                     return
                 end
 
@@ -1691,17 +1757,20 @@ spawn(function()
                         local mobRoot = mob:FindFirstChild("HumanoidRootPart")
                         if not mobRoot then continue end
 
+                        PosMon = mobRoot.Position
                         BringMob(true)
 
                         repeat
                             task.wait()
                             if not _G.Level or not mob.Parent or mob.Humanoid.Health <= 0 then break end
+
                             local dist = (Root.Position - mobRoot.Position).Magnitude
                             if dist > 250 then
                                 _tp(mobRoot.CFrame * CFrame.new(0, 40, 0))
                             elseif dist > 30 then
                                 Root.CFrame = Root.CFrame:Lerp(mobRoot.CFrame * CFrame.new(0, 20, 0), 0.25)
                             end
+
                             Attack.Kill(mob, _G.Level)
                         until mob.Humanoid.Health <= 0 or not mob.Parent
                         break
@@ -1709,7 +1778,7 @@ spawn(function()
                 end
 
                 -- Nếu không thấy mob thì về chỗ spawn
-                if not foundMob and mobPos then
+                if not foundMob then
                     _tp(mobPos)
                     task.wait(0.5)
                     local spawnMob = ws.Enemies:FindFirstChild(questMobName)
@@ -1721,7 +1790,6 @@ spawn(function()
         end
     end
 end)
-
 local TravelDress = Tabs.Main:AddToggle("TravelDress", {Title = "Auto Travel Dressrosa", Description = "", Default = false})
 TravelDress:OnChanged(function(Value)
   _G.TravelDres = Value
