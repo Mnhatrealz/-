@@ -191,57 +191,22 @@ statsSetings = function(Num, value)
     end
   end
 end
-local plr = game.Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-
--- Hàm BringEnemy (gom mob về PosMon)
-BringEnemy = function(enable)
-    if not enable or not PosMon then return end
-    local enemies = workspace:WaitForChild("Enemies"):GetChildren()
-    if #enemies == 0 then return end
-
-    for _, v in pairs(enemies) do
-        pcall(function()
-            local hum = v:FindFirstChild("Humanoid")
-            local hrp = v:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and hum.Health > 0 then
-                local distance = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                if distance <= 350 then
-                    local TargetCFrame = CFrame.new(PosMon.X, PosMon.Y, PosMon.Z)
-                    local diff = (hrp.Position - TargetCFrame.Position).Magnitude
-                    if diff > 3 and diff <= 300 then
-                        TweenObject(hrp, TargetCFrame, 300)
-                        hrp.CanCollide = false
-                        hum.WalkSpeed = 0
-                        hum.JumpPower = 0
-                        if hum:FindFirstChild("Animator") then
-                            hum.Animator:Destroy()
-                        end
-                        pcall(function()
-                            if sethiddenproperty then
-                                sethiddenproperty(plr, "SimulationRadius", math.huge)
-                            else
-                                plr.SimulationRadius = math.huge
-                            end
-                        end)
-                    end
-                end
-            end
-        end)
-        task.wait(0.03)
+BringEnemy = function()
+  for _,v in pairs(workspace.Enemies:GetChildren()) do
+    if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+      if PosMon and (v.PrimaryPart.Position - PosMon).Magnitude <= 300 then 
+        v.PrimaryPart.CFrame = CFrame.new(PosMon)
+        v.PrimaryPart.CanCollide = false
+        v.Humanoid.WalkSpeed = 0
+        v.Humanoid.JumpPower = 0
+        if v.Humanoid:FindFirstChild("Animator") then
+          v.Humanoid.Animator:Destroy()
+        end
+        plr.SimulationRadius = math.huge
+      end
     end
+  end
 end
-
--- Tween mượt đối tượng tới vị trí CFrame mong muốn
-local function TweenObject(Object, Pos, Speed)
-    Speed = Speed or 350
-    if not Object or not Pos then return end
-    local Distance = (Pos.Position - Object.Position).Magnitude
-    local info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(Object, info, {CFrame = Pos})
-    tween:Play()
-end
-
 Useskills = function(weapon, skill)
   if weapon == "Melee" then
     weaponSc("Melee")
@@ -1701,8 +1666,60 @@ local FarmLevel = Tabs.Main:AddToggle("FarmLevel", {Title = "Auto Farm Level", D
 FarmLevel:OnChanged(function(Value)
   _G.Level = Value
 end)
+-- BringEnemy gom mob
+local plr = game.Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+-- Tween mượt đối tượng tới vị trí CFrame mong muốn
+local function TweenObject(Object, Pos, Speed)
+    Speed = Speed or 350
+    if not Object or not Pos then return end
+    local Distance = (Pos.Position - Object.Position).Magnitude
+    local info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(Object, info, {CFrame = Pos})
+    tween:Play()
+end
+
+-- Hàm BringEnemy gom mob về PosMon
+BringEnemy = function(enable)
+    if not enable or not PosMon then return end
+    local enemies = workspace:WaitForChild("Enemies"):GetChildren()
+    if #enemies == 0 then return end
+
+    for _, v in pairs(enemies) do
+        pcall(function()
+            local hum = v:FindFirstChild("Humanoid")
+            local hrp = v:FindFirstChild("HumanoidRootPart")
+            if hum and hrp and hum.Health > 0 then
+                local distance = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+                if distance <= 350 then
+                    local TargetCFrame = CFrame.new(PosMon.X, PosMon.Y, PosMon.Z)
+                    local diff = (hrp.Position - TargetCFrame.Position).Magnitude
+                    if diff > 3 and diff <= 300 then
+                        TweenObject(hrp, TargetCFrame, 300)
+                        hrp.CanCollide = false
+                        hum.WalkSpeed = 0
+                        hum.JumpPower = 0
+                        if hum:FindFirstChild("Animator") then
+                            hum.Animator:Destroy()
+                        end
+                        pcall(function()
+                            if sethiddenproperty then
+                                sethiddenproperty(plr, "SimulationRadius", math.huge)
+                            else
+                                plr.SimulationRadius = math.huge
+                            end
+                        end)
+                    end
+                end
+            end
+        end)
+        task.wait(0.03)
+    end
+end
+
+-- Farm level
 spawn(function()
-    local plr = game.Players.LocalPlayer
     local replicated = game:GetService("ReplicatedStorage")
     local ws = game:GetService("Workspace")
     local Root = plr.Character:WaitForChild("HumanoidRootPart")
@@ -1727,9 +1744,7 @@ spawn(function()
                     replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
                     task.wait(0.25)
                     _tp(questPos)
-                    repeat
-                        task.wait()
-                    until (Root.Position - questPos.Position).Magnitude <= 6
+                    repeat task.wait() until (Root.Position - questPos.Position).Magnitude <= 6
                     replicated.Remotes.CommF_:InvokeServer("StartQuest", questIndex, questID)
                     return
                 end
@@ -1741,6 +1756,12 @@ spawn(function()
                         foundMob = true
                         local mobRoot = mob:FindFirstChild("HumanoidRootPart")
                         if not mobRoot then continue end
+
+                        -- Gán PosMon = vị trí mob đầu tiên (cho BringEnemy)
+                        PosMon = mobRoot.Position
+
+                        -- Gom mob xung quanh trước khi đánh
+                        BringEnemy(true)
 
                         repeat
                             task.wait()
