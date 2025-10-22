@@ -2690,21 +2690,42 @@ local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Bones", Description = "", Defa
 Q:OnChanged(function(Value)
   _G.AutoFarm_Bone = Value
 end)
---// Biến chính
+--// Cấu hình
+_G.AutoFarm_Bone = true
+_G.AcceptQuestC = true
+
+--// Dịch vụ & biến
 local plr = game.Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
+local rs = game:GetService("ReplicatedStorage")
 
---// Hàm Tween di chuyển mượt
-local function TweenObject(Object, Pos, Speed)
-    Speed = Speed or 350
-    if not Object or not Pos then return end
-    local Distance = (Pos.Position - Object.Position).Magnitude
-    local Info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
-    local Tween = TweenService:Create(Object, Info, {CFrame = Pos})
-    Tween:Play()
+--// Tween di chuyển mượt
+local function TweenTo(cf)
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    local Distance = (cf.Position - hrp.Position).Magnitude
+    local info = TweenInfo.new(Distance / 350, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, info, {CFrame = cf})
+    tween:Play()
+    tween.Completed:Wait()
 end
 
---// Lấy vị trí trung bình mob theo tên
+--// Lấy mob gần nhất theo tên
+local function FindNearestEnemy(names)
+    local nearest, dist = nil, math.huge
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(names, enemy.Name) and enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") then
+            local d = (enemy.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+            if d < dist and enemy.Humanoid.Health > 0 then
+                nearest, dist = enemy, d
+            end
+        end
+    end
+    return nearest
+end
+
+--// Lấy vị trí trung bình của mob theo loại
 local function GetMobPosition(Name)
     local pos, count = Vector3.zero, 0
     for _, v in pairs(workspace.Enemies:GetChildren()) do
@@ -2722,29 +2743,24 @@ local function BringMob(enable)
     if not enable then return end
     local enemies = workspace.Enemies:GetChildren()
     if #enemies == 0 then return end
-
     local totalpos = {}
     for _, v in pairs(enemies) do
         if not totalpos[v.Name] then
             totalpos[v.Name] = GetMobPosition(v.Name)
         end
     end
-
     for _, v in pairs(enemies) do
         if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-            local hrp = v.HumanoidRootPart
-            local humanoid = v.Humanoid
+            local hrp, humanoid = v.HumanoidRootPart, v.Humanoid
             if humanoid.Health > 0 and (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 350 then
                 local mobPos = totalpos[v.Name]
                 if mobPos then
                     local targetCFrame = CFrame.new(mobPos)
                     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-                    if distance > 3 and distance <= 280 then
-                        TweenObject(hrp, targetCFrame, 300)
+                    if distance > 3 and distance <= 250 then
+                        TweenService:Create(hrp, TweenInfo.new(distance / 300, Enum.EasingStyle.Linear), {CFrame = targetCFrame}):Play()
                         hrp.CanCollide = false
-                        if humanoid:FindFirstChild("Animator") then
-                            humanoid.Animator:Destroy()
-                        end
+                        if humanoid:FindFirstChild("Animator") then humanoid.Animator:Destroy() end
                         pcall(function()
                             sethiddenproperty(plr, "SimulationRadius", math.huge)
                         end)
@@ -2755,55 +2771,56 @@ local function BringMob(enable)
     end
 end
 
---// AutoFarm Bone chính
+--// Hàm tấn công mob
+local function AttackEnemy(enemy)
+    if not enemy or not enemy:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    hrp.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 5)
+    BringMob(true)
+    -- Giả lập đánh (nếu có auto attack riêng thì gọi ở đây)
+    rs.Remotes.CommF_:InvokeServer("Damage", enemy)
+end
+
+--// Vòng lặp farm chính
 spawn(function()
-	while task.wait(0.15) do
-		if _G.AutoFarm_Bone then
-			pcall(function()
-				local player = plr
-				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-				local questUI = player.PlayerGui.Main.Quest
-				if not root then return end
+    while task.wait(0.2) do
+        if _G.AutoFarm_Bone then
+            pcall(function()
+                local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                local questUI = plr.PlayerGui.Main.Quest
+                local QuestPos = CFrame.new(-9516.99316, 172.017181, 6078.46533)
 
-				local BonesTable = {
-					{mob = "Reborn Skeleton", quest = {"StartQuest", "HauntedQuest1", 1}},
-					{mob = "Living Zombie", quest = {"StartQuest", "HauntedQuest1", 2}},
-					{mob = "Demonic Soul", quest = {"StartQuest", "HauntedQuest2", 1}},
-					{mob = "Posessed Mummy", quest = {"StartQuest", "HauntedQuest2", 2}},
-				}
+                local BonesTable = {
+                    {mob = "Reborn Skeleton", quest = {"StartQuest", "HauntedQuest1", 1}},
+                    {mob = "Living Zombie", quest = {"StartQuest", "HauntedQuest1", 2}},
+                    {mob = "Demonic Soul", quest = {"StartQuest", "HauntedQuest2", 1}},
+                    {mob = "Posessed Mummy", quest = {"StartQuest", "HauntedQuest2", 2}},
+                }
 
-				local QuestPos = CFrame.new(-9516.99316, 172.017181, 6078.46533)
+                for _, data in ipairs(BonesTable) do
+                    if not _G.AutoFarm_Bone then break end
+                    local enemy = FindNearestEnemy({data.mob})
+                    if not questUI.Visible and _G.AcceptQuestC then
+                        TweenTo(QuestPos)
+                        rs.Remotes.CommF_:InvokeServer(unpack(data.quest))
+                        task.wait(0.5)
+                    end
 
-				for _, mobData in ipairs(BonesTable) do
-					if not _G.AutoFarm_Bone then break end
-
-					local bone = GetConnectionEnemies({mobData.mob})
-					if bone then
-						-- Nhận nhiệm vụ nếu chưa có
-						if _G.AcceptQuestC and not questUI.Visible then
-							_tp(QuestPos)
-							repeat task.wait(0.2) until (QuestPos.Position - root.Position).Magnitude <= 50
-							pcall(function()
-								game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
-							end)
-						end
-						if questUI.Visible == false then
-							game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
-						end
-
-						-- Farm mob + gom lại
-						repeat
-							task.wait()
-							BringMob(true)
-							Attack.Kill(bone, _G.AutoFarm_Bone)
-						until not _G.AutoFarm_Bone or not bone.Parent or bone.Humanoid.Health <= 0 or (_G.AcceptQuestC and not questUI.Visible)
-					else
-						_tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
-					end
-				end
-			end)
-		end
-	end
+                    if enemy then
+                        repeat
+                            task.wait()
+                            AttackEnemy(enemy)
+                        until not _G.AutoFarm_Bone or not enemy.Parent or enemy.Humanoid.Health <= 0
+                    else
+                        -- Nếu không tìm thấy mob thì di chuyển về khu mob
+                        TweenTo(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+                    end
+                end
+            end)
+        end
+    end
 end)
 local Q = Tabs.Main:AddToggle("Q", {Title = "Accept Quests", Description = "", Default = false})
 Q:OnChanged(function(Value)
