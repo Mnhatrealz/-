@@ -1554,8 +1554,8 @@ local Tabs = {
 }
 
 Tabs.Main:AddButton({
-        Title="Update Script",
-        Description="No Support Krnl",
+        Title="Thông Báo Update",
+        Description="Farm Level Lỗi",
         Callback=function()
             setclipboard(tostring("")) 
         end
@@ -2612,322 +2612,193 @@ local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Farm Cakes", Description = "",
 Q:OnChanged(function(Value)
 _G.Auto_Cake_Prince = Value
 end)
--- 📦 Setup cơ bản
-local plr = game.Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Enemies = workspace:WaitForChild("Enemies")
-
--- 📦 Tween di chuyển
-local function TweenObject(Object, Pos, Speed)
-	Speed = Speed or 350
-	if not Object or not Pos then return end
-	local Distance = (Pos.Position - Object.Position).Magnitude
-	local info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
-	local tween = TweenService:Create(Object, info, {CFrame = Pos})
-	tween:Play()
-end
-
--- 📦 Lấy vị trí trung bình mob
-local function GetMobPosition(EnemiesName)
-	local pos = Vector3.zero
-	local count = 0
-	for _, v in pairs(Enemies:GetChildren()) do
-		if v.Name == EnemiesName and v:FindFirstChild("HumanoidRootPart") then
-			pos += v.HumanoidRootPart.Position
-			count += 1
-		end
-	end
-	if count == 0 then return nil end
-	return pos / count
-end
-
--- 📦 Gom mob
-local function BringMob(enable)
-	if not enable then return end
-	local enemies = Enemies:GetChildren()
-	if #enemies == 0 then return end
-	local totalpos = {}
-
-	for _, v in pairs(enemies) do
-		if not totalpos[v.Name] then
-			totalpos[v.Name] = GetMobPosition(v.Name)
-		end
-	end
-
-	for _, v in pairs(enemies) do
-		local hrp = v:FindFirstChild("HumanoidRootPart")
-		local hum = v:FindFirstChild("Humanoid")
-		if hrp and hum and hum.Health > 0 then
-			local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-			if root and (hrp.Position - root.Position).Magnitude <= 350 then
-				local mobPos = totalpos[v.Name]
-				if mobPos then
-					local target = CFrame.new(mobPos)
-					local dist = (hrp.Position - mobPos).Magnitude
-					if dist > 3 and dist <= 280 then
-						pcall(function()
-							sethiddenproperty(plr, "SimulationRadius", math.huge)
-						end)
-						hrp.CanCollide = false
-						if hum:FindFirstChild("Animator") then hum.Animator:Destroy() end
-						v:PivotTo(target)
-					end
-				end
-			end
-		end
-	end
-end
-
--- 📦 Hàm tìm mob
-local function GetConnectionEnemies(list)
-	for _, v in pairs(Enemies:GetChildren()) do
-		if (typeof(list) == "string" and v.Name == list) or (typeof(list) == "table" and table.find(list, v.Name)) then
-			if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-				return v
-			end
-		end
-	end
-end
-
--- 📦 Hàm teleport
-local function _tp(cf)
-	local char = plr.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.CFrame = cf
-	end
-end
-
--- 📦 Hàm attack giả định
-local Attack = {}
-
-function Attack.Kill(target, active)
-	while active and target and target.Parent and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 do
-		task.wait(0.1)
-		BringMob(true)
-	end
-end
-
-Attack.Kill2 = Attack.Kill -- dùng chung logic
-
--- 📦 AUTO CAKE PRINCE
 spawn(function()
-	while task.wait(0.25) do
-		if _G.Auto_Cake_Prince then
-			pcall(function()
-				local player = plr
-				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-				local questUI = player.PlayerGui.Main.Quest
-				local enemies = Enemies
-				local cakeIslandPos = CFrame.new(-2077, 252, -12373)
-				if not root then return end
+  while task.wait() do
+    if _G.Auto_Cake_Prince then
+      pcall(function()
+        local player = game.Players.LocalPlayer
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local questUI = player.PlayerGui.Main.Quest
+        local enemies = workspace.Enemies
+        local cakeIslandPos = CFrame.new(-2077, 252, -12373)
+        if not root then return end
 
-				local cakeLoaf = workspace.Map:FindFirstChild("CakeLoaf")
-				local bigMirror = cakeLoaf and cakeLoaf:FindFirstChild("BigMirror")
+        local cakeLoaf = workspace.Map:FindFirstChild("CakeLoaf")
+        local bigMirror = cakeLoaf and cakeLoaf:FindFirstChild("BigMirror")
 
-				-- ⚙️ Teleport đến đảo nếu xa
-				if not bigMirror or not bigMirror:FindFirstChild("Other") or (cakeIslandPos.Position - root.Position).Magnitude > 3000 then
-					_tp(cakeIslandPos)
-					return
-				end
+        if not bigMirror or not bigMirror:FindFirstChild("Other") or (cakeIslandPos.Position - root.Position).Magnitude > 3000 then
+          _tp(cakeIslandPos)
+        end
 
-				local transparency = 1
-				if bigMirror and bigMirror:FindFirstChild("Other") then
-					transparency = bigMirror.Other.Transparency
-				end
+        local transparency = 1
+        if bigMirror and bigMirror:FindFirstChild("Other") then
+          transparency = bigMirror.Other.Transparency
+        end
 
-				-- ⚔️ Khi boss xuất hiện
-				if transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-					local v = GetConnectionEnemies("Cake Prince")
-					if v then
-						repeat
-							task.wait(0.1)
-							Attack.Kill2(v, _G.Auto_Cake_Prince)
-						until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0
-					else
-						if transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-							_tp(CFrame.new(-2151.82, 149.32, -12404.91))
-						end
-					end
-				else
-					-- 🎂 Farm mob để mở boss
-					local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-					local v = GetConnectionEnemies(CakePrince)
+        if transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+          local v = GetConnectionEnemies("Cake Prince")
+          if v then
+            repeat task.wait()
+              Attack.Kill2(v, _G.Auto_Cake_Prince)
+            until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0
+          else
+            if transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+              _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+            end
+          end
+        else
+          local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
+          local v = GetConnectionEnemies(CakePrince)
+          if v then
+            if _G.AcceptQuestC and not questUI.Visible then
+              local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+              _tp(questPos)
 
-					if v then
-						if _G.AcceptQuestC and not questUI.Visible then
-							local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-							_tp(questPos)
+              while root and (questPos.Position - root.Position).Magnitude > 15 do
+                task.wait(0.2)
+              end
 
-							repeat task.wait(0.3)
-								root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-							until not root or (questPos.Position - root.Position).Magnitude <= 15 or not _G.Auto_Cake_Prince
+              local questData = {
+                {"StartQuest", "CakeQuest2", 2},
+                {"StartQuest", "CakeQuest2", 1},
+                {"StartQuest", "CakeQuest1", 1},
+                {"StartQuest", "CakeQuest1", 2}
+              }
+              local randomQuest = questData[math.random(1, #questData)]
 
-							local questData = {
-								{"StartQuest", "CakeQuest2", 2},
-								{"StartQuest", "CakeQuest2", 1},
-								{"StartQuest", "CakeQuest1", 1},
-								{"StartQuest", "CakeQuest1", 2}
-							}
-							local randomQuest = questData[math.random(1, #questData)]
+              local success = false
+              repeat
+                success = pcall(function()
+                  return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(randomQuest))
+                end)
+                task.wait(0.5)
+              until not _G.Auto_Cake_Prince or questUI.Visible
+            end
 
-							repeat
-								pcall(function()
-									ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(randomQuest))
-								end)
-								task.wait(0.5)
-							until questUI.Visible or not _G.Auto_Cake_Prince
-						end
-
-						repeat
-							task.wait(0.1)
-							Attack.Kill(v, _G.Auto_Cake_Prince)
-						until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0 or transparency == 0
-					else
-						_tp(cakeIslandPos)
-					end
-				end
-			end)
-		end
-	end
+            repeat task.wait()
+              Attack.Kill(v, _G.Auto_Cake_Prince)
+            until not _G.Auto_Cake_Prince or v.Humanoid.Health <= 0 or transparency == 0
+          else
+            _tp(CFrame.new(-2077, 252, -12373))
+          end
+        end
+      end)
+    end
+  end
 end)
-local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Farm Bones", Description = "", Default = false})
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Bones", Description = "", Default = false})
 Q:OnChanged(function(Value)
   _G.AutoFarm_Bone = Value
 end)
+--// Biến chính
 local plr = game.Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Enemies = workspace:WaitForChild("Enemies")
 
--- Tween di chuyển mượt
+--// Hàm Tween di chuyển mượt
 local function TweenObject(Object, Pos, Speed)
-	Speed = Speed or 350
-	if not Object or not Pos then return end
-	local Distance = (Pos.Position - Object.Position).Magnitude
-	local Info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
-	local Tween = TweenService:Create(Object, Info, {CFrame = Pos})
-	Tween:Play()
+    Speed = Speed or 350
+    if not Object or not Pos then return end
+    local Distance = (Pos.Position - Object.Position).Magnitude
+    local Info = TweenInfo.new(Distance / Speed, Enum.EasingStyle.Linear)
+    local Tween = TweenService:Create(Object, Info, {CFrame = Pos})
+    Tween:Play()
 end
 
--- Lấy vị trí trung bình mob
-local function GetMobPosition(EnemiesName)
-	local pos = Vector3.zero
-	local count = 0
-	for _, v in pairs(Enemies:GetChildren()) do
-		if v.Name == EnemiesName and v:FindFirstChild("HumanoidRootPart") then
-			pos += v.HumanoidRootPart.Position
-			count += 1
-		end
-	end
-	if count == 0 then return nil end
-	return pos / count
+--// Lấy vị trí trung bình mob theo tên
+local function GetMobPosition(Name)
+    local pos, count = Vector3.zero, 0
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v.Name == Name and v:FindFirstChild("HumanoidRootPart") then
+            pos += v.HumanoidRootPart.Position
+            count += 1
+        end
+    end
+    if count == 0 then return nil end
+    return pos / count
 end
 
--- Gom mob lại gần nhau
+--// Gom mob lại gần nhau
 local function BringMob(enable)
-	if not enable then return end
-	local enemies = Enemies:GetChildren()
-	if #enemies == 0 then return end
+    if not enable then return end
+    local enemies = workspace.Enemies:GetChildren()
+    if #enemies == 0 then return end
 
-	-- Tính vị trí trung bình từng loại mob
-	local totalpos = {}
-	for _, v in pairs(enemies) do
-		if not totalpos[v.Name] then
-			totalpos[v.Name] = GetMobPosition(v.Name)
-		end
-	end
+    local totalpos = {}
+    for _, v in pairs(enemies) do
+        if not totalpos[v.Name] then
+            totalpos[v.Name] = GetMobPosition(v.Name)
+        end
+    end
 
-	-- Gom mob
-	for _, v in pairs(enemies) do
-		local hrp = v:FindFirstChild("HumanoidRootPart")
-		local hum = v:FindFirstChild("Humanoid")
-		if hrp and hum and hum.Health > 0 then
-			local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-			if root and (hrp.Position - root.Position).Magnitude <= 350 then
-				local mobPos = totalpos[v.Name]
-				if mobPos then
-					local target = CFrame.new(mobPos)
-					local dist = (hrp.Position - mobPos).Magnitude
-					if dist > 3 and dist <= 280 then
-						pcall(function()
-							sethiddenproperty(plr, "SimulationRadius", math.huge)
-						end)
-						hrp.CanCollide = false
-						if hum:FindFirstChild("Animator") then hum.Animator:Destroy() end
-						v:PivotTo(target)
-					end
-				end
-			end
-		end
-	end
+    for _, v in pairs(enemies) do
+        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.HumanoidRootPart
+            local humanoid = v.Humanoid
+            if humanoid.Health > 0 and (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 350 then
+                local mobPos = totalpos[v.Name]
+                if mobPos then
+                    local targetCFrame = CFrame.new(mobPos)
+                    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+                    if distance > 3 and distance <= 280 then
+                        TweenObject(hrp, targetCFrame, 300)
+                        hrp.CanCollide = false
+                        if humanoid:FindFirstChild("Animator") then
+                            humanoid.Animator:Destroy()
+                        end
+                        pcall(function()
+                            sethiddenproperty(plr, "SimulationRadius", math.huge)
+                        end)
+                    end
+                end
+            end
+        end
+    end
 end
 
--- 🔧 Hàm tìm mob (fix tạm)
-local function GetConnectionEnemies(list)
-	for _, v in pairs(Enemies:GetChildren()) do
-		if table.find(list, v.Name) and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
-			return v
-		end
-	end
-end
-
--- 🔧 Hàm teleport đơn giản (tùy bạn có hàm riêng thì giữ nguyên)
-local function _tp(cf)
-	local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.CFrame = cf
-	end
-end
-
--- 🔧 Hàm tấn công giả định
-local Attack = {}
-function Attack.Kill(target, active)
-	while active and target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 do
-		task.wait()
-		BringMob(true) -- gom mob khi đánh
-	end
-end
-
--- Auto farm bones
+--// AutoFarm Bone chính
 spawn(function()
 	while task.wait(0.15) do
 		if _G.AutoFarm_Bone then
 			pcall(function()
-				local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+				local player = plr
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				local questUI = player.PlayerGui.Main.Quest
 				if not root then return end
 
-				local questUI = plr.PlayerGui.Main.Quest
 				local BonesTable = {
 					{mob = "Reborn Skeleton", quest = {"StartQuest", "HauntedQuest1", 1}},
+					{mob = "Living Zombie", quest = {"StartQuest", "HauntedQuest1", 2}},
 					{mob = "Demonic Soul", quest = {"StartQuest", "HauntedQuest2", 1}},
 					{mob = "Posessed Mummy", quest = {"StartQuest", "HauntedQuest2", 2}},
-					{mob = "Living Zombie", quest = {"StartQuest", "HauntedQuest1", 2}},
 				}
+
 				local QuestPos = CFrame.new(-9516.99316, 172.017181, 6078.46533)
 
 				for _, mobData in ipairs(BonesTable) do
 					if not _G.AutoFarm_Bone then break end
-					local bone = GetConnectionEnemies({mobData.mob})
 
+					local bone = GetConnectionEnemies({mobData.mob})
 					if bone then
+						-- Nhận nhiệm vụ nếu chưa có
 						if _G.AcceptQuestC and not questUI.Visible then
 							_tp(QuestPos)
 							repeat task.wait(0.2) until (QuestPos.Position - root.Position).Magnitude <= 50
-							ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
+							pcall(function()
+								game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
+							end)
+						end
+						if questUI.Visible == false then
+							game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
 						end
 
-						if not questUI.Visible then
-							ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(mobData.quest))
-						end
-
+						-- Farm mob + gom lại
 						repeat
 							task.wait()
+							BringMob(true)
 							Attack.Kill(bone, _G.AutoFarm_Bone)
-						until not _G.AutoFarm_Bone or not bone.Parent or bone.Humanoid.Health <= 0
+						until not _G.AutoFarm_Bone or not bone.Parent or bone.Humanoid.Health <= 0 or (_G.AcceptQuestC and not questUI.Visible)
 					else
-						_tp(CFrame.new(-9495.6807, 453.5862, 5977.3486))
+						_tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
 					end
 				end
 			end)
