@@ -6,26 +6,23 @@
 ---
 
 ## ⚡ About Neon X Hub
-**Neon X Hub** là một Roblox Script Hub đa chức năng được thiết kế theo phong cách **Neon Cyberpunk**,  
-tối ưu cho game **Blox Fruits** và nhiều game khác.
+**Neon X Hub** là một Roblox Script Hub đa chức năng
+tối ưu cho game **Blox Fruits** 
 
 ✔ Mượt – Không giật  
-✔ UI Neon cực đẹp  
-✔ Tập trung vào Auto Farm + Fast Attack + Teleport  
+✔ Tập trung vào Auto Farm + Fast Attack
 
 ---
 
 ## 🔥 Features
-- ⚔ **Auto Farm** thông minh, anti-stuck  
-- 🔥 **Fast Attack** (ổn định – không kick)  
-- 🌀 **Teleport** nhanh mượt  
+- ⚔ **Auto Farm** 
+- 🔥 **Fast Attack**
+- 🌀 **Teleport**
 - 🎮 **Mob Aura / Hitbox / Bring Mob**  
-- 🎯 **Auto Quest / Auto Chest**  
-- 🛡 **Auto Ken / Auto Buso / Auto Stat**
 
 ---
 
 ## 🧬 Script Loader
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NeonXHub/Loader/main.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/Main.lua"))()
