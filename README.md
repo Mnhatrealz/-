@@ -22,16 +22,10 @@ tối ưu cho game **Blox Fruits**
 
 ---
 
-## 🧬 Script 1
+## 🧬 Script 
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/Main.lua"))()
-
----
-
-## 🧬 Script 2
-```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/BloxFruit.lua"))()
 
 
 
