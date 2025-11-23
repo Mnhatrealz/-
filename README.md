@@ -1,6 +1,6 @@
 <!-- Banner -->
 <h1 align="center">
-  <img src="https://readme-typing-svg.herokuapp.com?color=00FFFF&center=true&vCenter=true&width=600&lines=✨+NEON+X+HUB+✨;Roblox+Script+Hub;Fast+Attack+%7C+Auto+Farm+%7C+Teleport;Designed+in+Neon+Cyber+Style" />
+  <img src="https://readme-typing-svg.herokuapp.com?color=00FFFF&center=true&vCenter=true&width=600&lines=✨+NEON+X+HUB+✨" />
 </h1>
 
 ---
