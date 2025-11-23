@@ -26,3 +26,5 @@ tối ưu cho game **Blox Fruits**
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/Main.lua"))()
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/BloxFruit.lua"))()
