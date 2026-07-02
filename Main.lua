@@ -4,4 +4,7 @@ if placeId == 7449423635 or placeId == 2753915549 or placeId == 4442272183 or pl
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/BloxFruit.lua"))()
 elseif placeId == 111989938562194 then
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/BrainrotEvolution.lua"))()
+	elseif placeId == 97598239454123 then
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/Mnhatrealz/-/refs/heads/main/MainGAG2.lua"))()
 end
+
